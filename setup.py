@@ -1,19 +1,20 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='my_library',  # Replace with your package name
-    version='0.1',
+    name='investgo',
+    version='0.1.0',
     packages=find_packages(),
     install_requires=[
-        'requests',
-        'pandas'
+        'flask',
+        'cloudscraper',
+        'pandas',
     ],
-    description='A library to interact with my Flask API hosted on Render',
+    author='gohibiki',
+    author_email='gohibiki@protonmail.com',
+    description='A package to fetch historical stock prices from Investing.com',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    url='https://github.com/yourusername/my_library',  # Replace with your repository URL
-    author='Your Name',
-    author_email='your.email@example.com',
+    url='https://github.com/gohibiki/investgo',
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',
