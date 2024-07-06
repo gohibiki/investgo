@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 
-BASE_URL = "https://your-render-app-url/api/historical_prices"
+BASE_URL = "https://investgo.onrender.com/api/historical_prices"
 
 def get_historical_prices(stock_id, date_from, date_to):
     params = {
