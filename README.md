@@ -18,11 +18,11 @@ pip install investgo
 ## Usage
 
 ```sh
-from your_project.historical_prices import historical_prices
+from investgo import pair_id, historical_prices
 ```
 # Example parameters
 ```sh
-stock_id = 1039381
+stock_id = pair_id('QQQ')
 date_from = "07072021"
 date_to = "07052024"
 ```
