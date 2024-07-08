@@ -14,3 +14,17 @@ You can install InvestGo directly from PyPI:
 
 ```sh
 pip install investgo
+
+## Usage
+
+```sh
+from your_project.historical_prices import historical_prices
+
+# Example parameters
+stock_id = 1039381
+date_from = "07072021"
+date_to = "07052024"
+
+# Fetch historical data
+data = historical_prices(stock_id, date_from, date_to)
+
