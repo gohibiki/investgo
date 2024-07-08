@@ -1,1 +1,1 @@
-from .historical import get_historical_prices  
+from .historical import historical_prices  
