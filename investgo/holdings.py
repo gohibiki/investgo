@@ -32,6 +32,14 @@ def to_numeric(df, columns):
 def parse_holdings_data(json_data):
     holdings_info = json_data['data'][0]['screen_data'].get('holdings_info', {})
 
+    if not holdings_info:
+        return {
+            TOP_HOLDINGS: pd.DataFrame([{'name': 'No information', 'weight': 0.0}]),
+            ASSETS_ALLOCATION: pd.DataFrame([{'fldname': 'Other', 'val': 100.0}]),
+            STOCK_SECTOR: pd.DataFrame([{'fieldname': 'No information', 'val': 0.0}]),
+            STOCK_REGION: pd.DataFrame([{'key': 'North America', 'val': 100.0}]),
+        }
+
     # Handle Top Holdings
     if 'topHoldings' in holdings_info:
         top_holdings_df = pd.DataFrame(holdings_info['topHoldings'])
