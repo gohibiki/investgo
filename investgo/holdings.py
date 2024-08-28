@@ -30,26 +30,28 @@ def to_numeric(df, columns):
     return df
 
 def parse_holdings_data(json_data):
-    holdings_info = json_data['data'][0]['screen_data']['holdings_info']
-
-    if not holdings_info:
-        return {
-            TOP_HOLDINGS: pd.DataFrame([{'name': 'No information', 'weight': 0.0}]),
-            ASSETS_ALLOCATION: pd.DataFrame([{'fldname': 'Stock', 'val': 100.0}]),
-            STOCK_SECTOR: pd.DataFrame([{'fieldname': 'No information', 'val': 0.0}]),
-            STOCK_REGION: pd.DataFrame([{'key': 'North America', 'val': 100.0}]),
-        }
+    holdings_info = json_data['data'][0]['screen_data'].get('holdings_info', {})
 
     # Handle Top Holdings
-    top_holdings_df = pd.DataFrame(holdings_info['topHoldings']).iloc[:, [0, 2]]
-    top_holdings_df = to_numeric(top_holdings_df, ['weight'])
-    top_holdings_df = top_holdings_df.sort_values(by='weight', ascending=False)
+    if 'topHoldings' in holdings_info:
+        top_holdings_df = pd.DataFrame(holdings_info['topHoldings'])
+        if top_holdings_df.shape[1] > 2:
+            top_holdings_df = top_holdings_df.iloc[:, [0, 2]]
+            top_holdings_df = to_numeric(top_holdings_df, ['weight'])
+            top_holdings_df = top_holdings_df.sort_values(by='weight', ascending=False)
+        else:
+            top_holdings_df = pd.DataFrame([{'name': 'No information', 'weight': 0.0}])
+    else:
+        top_holdings_df = pd.DataFrame([{'name': 'No information', 'weight': 0.0}])
 
     # Handle Assets Allocation
-    assets_allocation_df = pd.DataFrame(holdings_info['assetsAllocation']).iloc[:, 1:3]
-    assets_allocation_df = assets_allocation_df[assets_allocation_df['fldname'] != 'other_pie_chart']
-    assets_allocation_df = to_numeric(assets_allocation_df, ['val'])
-    assets_allocation_df = assets_allocation_df.sort_values(by='val', ascending=False)
+    if 'assetsAllocation' in holdings_info and holdings_info['assetsAllocation']:
+        assets_allocation_df = pd.DataFrame(holdings_info['assetsAllocation']).iloc[:, 1:3]
+        assets_allocation_df = assets_allocation_df[assets_allocation_df['fldname'] != 'other_pie_chart']
+        assets_allocation_df = to_numeric(assets_allocation_df, ['val'])
+        assets_allocation_df = assets_allocation_df.sort_values(by='val', ascending=False)
+    else:
+        assets_allocation_df = pd.DataFrame([{'fldname': 'Other', 'val': 100.0}])
 
     # Safely extract stock, bond, and cash proportions
     stock_proportion = assets_allocation_df.loc[assets_allocation_df['fldname'] == 'Stock', 'val']
@@ -75,6 +77,8 @@ def parse_holdings_data(json_data):
             sector_df = to_numeric(sector_df, ['val'])
             sector_df = sector_df.groupby(sector_df.columns[0], as_index=False).sum()  # Group by sector and sum the values
             sector_df = sector_df.sort_values(by='val', ascending=False)
+    else:
+        sector_df = pd.DataFrame([{'fieldname': 'No information', 'val': 0.0}])
 
     # Adjust Stock and Bond Region Data by their proportions
     stock_region_df = pd.DataFrame(holdings_info.get('stockRegionData', []))
@@ -94,6 +98,8 @@ def parse_holdings_data(json_data):
             region_df = to_numeric(region_df, ['val'])
             region_df = region_df.groupby(region_df.columns[0], as_index=False).sum()  # Group by region and sum the values
             region_df = region_df.sort_values(by='val', ascending=False)
+    else:
+        region_df = pd.DataFrame([{'key': 'North America', 'val': 100.0}])
 
     return {
         TOP_HOLDINGS: top_holdings_df,
@@ -101,7 +107,6 @@ def parse_holdings_data(json_data):
         STOCK_SECTOR: sector_df,  # Combined sector data
         STOCK_REGION: region_df,  # Combined region data
     }
-
 
 
 def get_holdings(pair_id, holdings_type="all"):
