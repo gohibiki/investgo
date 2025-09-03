@@ -158,4 +158,46 @@ def get_technical_data(
     if interval not in VALID_INTERVALS:
         raise ValueError(
             f"Invalid interval '{interval}'. "
-            f"Choose from: {', '.join(sorted(
+            f"Choose from: {', '.join(sorted(VALID_INTERVALS))}"
+        )
+    
+    logger.info(f"Fetching {tech_type} data for interval {interval}")
+    
+    try:
+        data = fetch_technical_data(pair_id)
+        dfs = parse_technical_data(data, tech_type)
+        
+        # Get data for the specified interval
+        interval_index = INTERVAL_MAP.get(interval, 0)
+        
+        if dfs and len(dfs) > interval_index:
+            result_df = dfs[interval_index]
+            logger.info(f"Successfully retrieved {len(result_df)} {tech_type} data points")
+            return result_df
+        else:
+            logger.warning(f"No {tech_type} data available for interval {interval}")
+            return pd.DataFrame()
+            
+    except Exception as e:
+        logger.error(f"Error retrieving technical data: {e}")
+        raise
+
+
+def get_available_intervals() -> List[str]:
+    """
+    Get list of available time intervals.
+    
+    Returns:
+        List of valid interval strings
+    """
+    return list(VALID_INTERVALS)
+
+
+def get_available_tech_types() -> List[str]:
+    """
+    Get list of available technical data types.
+    
+    Returns:
+        List of valid technical data type strings
+    """
+    return list(VALID_TECH_TYPES)
