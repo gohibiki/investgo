@@ -189,4 +189,4 @@ This library is for educational and research purposes. Please respect Investing.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENCE.TXT) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENCE.txt) file for details.
