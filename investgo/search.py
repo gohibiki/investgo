@@ -38,13 +38,9 @@ def fetch_pair_data(search_string: str) -> Tuple[Dict[str, Any], str]:
     }
     headers = {"x-meta-ver": "14"}
 
-    try:
-        response = scraper.get(url, params=params, headers=headers)
-        response.raise_for_status()
-        return response.json(), search_string
-    except Exception as e:
-        logger.error(f"Failed to fetch data for search_string {search_string}: {e}")
-        raise
+    response = scraper.get(url, params=params, headers=headers)
+    response.raise_for_status()
+    return response.json(), search_string
 
 
 def json_to_dataframe(json_data_list: List[Tuple[Dict[str, Any], str]]) -> pd.DataFrame:
@@ -78,12 +74,14 @@ def json_to_dataframe(json_data_list: List[Tuple[Dict[str, Any], str]]) -> pd.Da
                     },
                     inplace=True,
                 )
+                # FIXED: Convert pair_id to string to ensure consistency
+                df_quotes['pair_id'] = df_quotes['pair_id'].astype(str)
                 df_quotes['search_string'] = search_string
                 df_list.append(df_quotes)
             except KeyError as e:
-                logger.warning(f"KeyError: {e} in search string: {search_string}")
+                print(f"KeyError: {e} in search string: {search_string}")
         else:
-            logger.warning(f"Missing 'quotes' in 'data' for search string: {search_string}")
+            print(f"Missing 'quotes' in 'data' for search string: {search_string}")
     
     if df_list:
         return pd.concat(df_list, ignore_index=True)
@@ -124,8 +122,6 @@ def get_pair_id(
     if isinstance(stock_ids, str):
         stock_ids = [stock_ids]
 
-    logger.info(f"Searching for {len(stock_ids)} ticker(s): {stock_ids}")
-
     with ThreadPoolExecutor() as executor:
         future_to_search = {
             executor.submit(fetch_pair_data, stock_id): stock_id 
@@ -137,21 +133,19 @@ def get_pair_id(
                 result = future.result()
                 results.append(result)
             except Exception as exc:
-                logger.error(f'Error fetching data for {future_to_search[future]}: {exc}')
+                print(f'Error fetching data for {future_to_search[future]}: {exc}')
     
     df = json_to_dataframe(results)
 
     if df.empty:
-        raise ValueError("Failed to convert data to DataFrame - no results found")
+        raise ValueError("Failed to convert data to DataFrame")
 
     if display_mode == "all":
         if len(stock_ids) > 1:
             raise ValueError("Display mode 'all' can only be used with a single stock ID.")
         return df
     elif display_mode == "first" and name == 'yes':
-        pair_ids = df.groupby('search_string')['pair_id'].first().tolist()
-        descriptions = df.groupby('search_string')['Description'].first().tolist()
-        return pair_ids, descriptions
+        return df.groupby('search_string')['pair_id'].first().tolist(), df.groupby('search_string')['Description'].first().tolist()
     elif display_mode == "first":
         return df.groupby('search_string')['pair_id'].first().tolist()
     else:
