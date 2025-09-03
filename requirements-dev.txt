@@ -1,0 +1,29 @@
+# Development dependencies for InvestGo
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+
+# Code formatting and linting
+black>=23.0.0
+flake8>=6.0.0
+isort>=5.12.0
+
+# Type checking
+mypy>=1.0.0
+types-requests>=2.28.0
+
+# Documentation
+sphinx>=5.0.0
+sphinx-rtd-theme>=1.2.0
+
+# Packaging and publishing
+build>=0.10.0
+twine>=4.0.0
+wheel>=0.40.0
+
+# Development tools
+pre-commit>=3.0.0
+jupyter>=1.0.0
+matplotlib>=3.6.0  # For examples
