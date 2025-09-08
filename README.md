@@ -185,7 +185,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Disclaimer
 
-This library is for educational and research purposes. Please respect Investing.com's terms of service and rate limits when using this library.
+This library is for educational and research purposes.
 
 ## License
 
