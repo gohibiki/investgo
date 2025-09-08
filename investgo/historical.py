@@ -77,12 +77,28 @@ def json_to_dataframe(json_data: Dict[str, Any]) -> pd.DataFrame:
             # Convert timestamp to date string
             item["date"] = datetime.utcfromtimestamp(item["date"]).strftime('%d%m%Y')
             
-            # Clean numeric fields
+            # Clean numeric fields with FIXED volume processing
             for key in ['price', 'open', 'high', 'low', 'vol', 'perc_chg']:
                 if key in item and isinstance(item[key], str):
-                    # Remove commas, convert K to thousands, remove % signs
-                    cleaned_value = item[key].replace(',', '').replace('K', '000').replace('%', '')
-                    item[key] = cleaned_value
+                    # Special handling for volume with M, K, B suffixes
+                    if key == 'vol':
+                        vol_str = item[key].replace(',', '').strip()
+                        if vol_str.endswith('M'):
+                            # Convert millions: '2.5M' -> '2500000'
+                            item[key] = str(float(vol_str[:-1]) * 1_000_000)
+                        elif vol_str.endswith('K'):
+                            # Convert thousands: '900K' -> '900000'
+                            item[key] = str(float(vol_str[:-1]) * 1_000)
+                        elif vol_str.endswith('B'):
+                            # Convert billions: '1.5B' -> '1500000000'
+                            item[key] = str(float(vol_str[:-1]) * 1_000_000_000)
+                        else:
+                            # No suffix, just remove % if present
+                            item[key] = vol_str.replace('%', '')
+                    else:
+                        # Handle other fields normally
+                        cleaned_value = item[key].replace(',', '').replace('K', '000').replace('%', '')
+                        item[key] = cleaned_value
         
         # Create DataFrame
         df = pd.DataFrame(screen_data)
