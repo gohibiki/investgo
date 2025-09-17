@@ -147,7 +147,7 @@ def generate_date_ranges(date_from: str, date_to: str, delta_days: int = 365) ->
     except ValueError as e:
         raise ValueError(f"Invalid date format. Use DDMMYYYY format: {e}")
     
-    if start_date >= end_date:
+    if start_date > end_date:
         raise ValueError("Start date must be before end date")
     
     delta = timedelta(days=delta_days)

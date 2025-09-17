@@ -10,7 +10,7 @@ from .historical import get_historical_prices, get_multiple_historical_prices
 from .holdings import get_holdings
 from .technical import get_technical_data
 
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 __author__ = "gohibiki"
 __email__ = "gohibiki@protonmail.com"
 __description__ = "A Python library for fetching financial data from Investing.com"
