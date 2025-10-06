@@ -9,47 +9,48 @@ import cloudscraper
 import pandas as pd
 from datetime import datetime, timedelta
 import concurrent.futures
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple
 import logging
 
+from .exceptions import InvalidParameterError, NoDataFoundError, APIError
+
 # Set up logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def fetch_historical_prices(stock_id: str, date_from: str, date_to: str) -> Dict[str, Any]:
+def fetch_historical_prices(pair_id: str, date_from: str, date_to: str) -> Dict[str, Any]:
     """
     Fetch historical price data from Investing.com API.
-    
+
     Args:
-        stock_id: The Investing.com pair ID
+        pair_id: The Investing.com pair ID
         date_from: Start date in DDMMYYYY format
         date_to: End date in DDMMYYYY format
-        
+
     Returns:
         JSON response from the API
-        
+
     Raises:
-        requests.exceptions.HTTPError: If the API request fails
+        APIError: If the API request fails
     """
     scraper = cloudscraper.create_scraper()
     url = "https://aappapi.investing.com/get_screen.php"
     params = {
         "screen_ID": 63,
-        "pair_ID": stock_id,
+        "pair_ID": pair_id,
         "lang_ID": 1,
         "date_from": date_from,
         "date_to": date_to
     }
     headers = {"x-meta-ver": "14"}
-    
+
     try:
         response = scraper.get(url, params=params, headers=headers)
         response.raise_for_status()
         return response.json()
     except Exception as e:
-        logger.error(f"Failed to fetch data for stock_id {stock_id}: {e}")
-        raise
+        logger.error(f"Failed to fetch data for pair_id {pair_id}: {e}")
+        raise APIError(f"Failed to fetch historical data for pair_id {pair_id}") from e
 
 
 def json_to_dataframe(json_data: Dict[str, Any]) -> pd.DataFrame:
@@ -139,16 +140,16 @@ def generate_date_ranges(date_from: str, date_to: str, delta_days: int = 365) ->
         List of (start_date, end_date) tuples in DDMMYYYY format
         
     Raises:
-        ValueError: If date format is invalid
+        InvalidParameterError: If date format is invalid
     """
     try:
         start_date = datetime.strptime(date_from, "%d%m%Y")
         end_date = datetime.strptime(date_to, "%d%m%Y")
     except ValueError as e:
-        raise ValueError(f"Invalid date format. Use DDMMYYYY format: {e}")
-    
+        raise InvalidParameterError(f"Invalid date format. Use DDMMYYYY format: {e}") from e
+
     if start_date > end_date:
-        raise ValueError("Start date must be before end date")
+        raise InvalidParameterError("Start date must be before end date")
     
     delta = timedelta(days=delta_days)
     date_ranges = []
@@ -164,70 +165,81 @@ def generate_date_ranges(date_from: str, date_to: str, delta_days: int = 365) ->
     return date_ranges
 
 
-def fetch_data_for_range(stock_id: str, date_range: Tuple[str, str]) -> pd.DataFrame:
+def fetch_data_for_range(pair_id: str, date_range: Tuple[str, str]) -> pd.DataFrame:
     """
     Fetch data for a single date range.
-    
+
     Args:
-        stock_id: The Investing.com pair ID
+        pair_id: The Investing.com pair ID
         date_range: Tuple of (start_date, end_date) in DDMMYYYY format
-        
+
     Returns:
         pandas.DataFrame with historical data for the date range
     """
     date_from, date_to = date_range
-    json_data = fetch_historical_prices(stock_id, date_from, date_to)
+    json_data = fetch_historical_prices(pair_id, date_from, date_to)
     return json_to_dataframe(json_data)
 
 
-def get_historical_prices(stock_id: str, date_from: str, date_to: str) -> pd.DataFrame:
+def get_historical_prices(pair_id: str, date_from: str, date_to: str) -> pd.DataFrame:
     """
     Get historical price data for a stock with automatic date range chunking.
-    
+
     This function automatically handles large date ranges by splitting them into
     smaller chunks and fetching data concurrently for better performance.
-    
+
     Args:
-        stock_id: The Investing.com pair ID (use get_pair_id to find this)
+        pair_id: The Investing.com pair ID (use get_pair_id to find this)
         date_from: Start date in DDMMYYYY format (e.g., "01012020")
         date_to: End date in DDMMYYYY format (e.g., "31122023")
-        
+
     Returns:
         pandas.DataFrame with columns:
             - price: Closing price
-            - open: Opening price  
+            - open: Opening price
             - high: Daily high
             - low: Daily low
             - vol: Volume
             - perc_chg: Percentage change
         Index is datetime
-        
+
     Raises:
-        ValueError: If parameters are invalid
-        requests.exceptions.HTTPError: If API requests fail
-        
+        InvalidParameterError: If parameters are invalid
+        APIError: If API requests fail
+
     Examples:
-        >>> stock_id = get_pair_id(['AAPL'])[0]
-        >>> df = get_historical_prices(stock_id, "01012023", "31122023")
+        >>> pair_id = get_pair_id(['AAPL'])[0]
+        >>> df = get_historical_prices(pair_id, "01012023", "31122023")
         >>> print(df.head())
     """
-    if not stock_id:
-        raise ValueError("stock_id cannot be empty")
-    
-    logger.info(f"Fetching historical data for stock_id {stock_id} from {date_from} to {date_to}")
-    
+    if not pair_id:
+        raise InvalidParameterError("pair_id cannot be empty")
+
+    # Validate dates early
+    try:
+        start_dt = datetime.strptime(date_from, "%d%m%Y")
+        end_dt = datetime.strptime(date_to, "%d%m%Y")
+        if start_dt > end_dt:
+            raise InvalidParameterError("Start date must be before end date")
+    except ValueError as e:
+        if "Start date" not in str(e):
+            raise InvalidParameterError(f"Invalid date format. Use DDMMYYYY format: {e}") from e
+        raise
+
+    logger.info(f"Fetching historical data for pair_id {pair_id} from {date_from} to {date_to}")
+
     # Generate date ranges for chunking
     date_ranges = generate_date_ranges(date_from, date_to)
     logger.info(f"Split into {len(date_ranges)} date ranges")
-    
+
     # Fetch data concurrently
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         futures = [
-            executor.submit(fetch_data_for_range, stock_id, date_range) 
+            executor.submit(fetch_data_for_range, pair_id, date_range)
             for date_range in date_ranges
         ]
         results = []
-        
+
         for future in concurrent.futures.as_completed(futures):
             try:
                 result = future.result()
@@ -253,40 +265,40 @@ def get_historical_prices(stock_id: str, date_from: str, date_to: str) -> pd.Dat
 
 
 def get_multiple_historical_prices(
-    stock_ids: List[str], 
-    date_from: str, 
+    pair_ids: List[str],
+    date_from: str,
     date_to: str
 ) -> pd.DataFrame:
     """
     Get historical data for multiple stocks concurrently.
-    
+
     Args:
-        stock_ids: List of Investing.com pair IDs
+        pair_ids: List of Investing.com pair IDs
         date_from: Start date in DDMMYYYY format
         date_to: End date in DDMMYYYY format
-        
+
     Returns:
         pandas.DataFrame with data for all stocks concatenated
-        
+
     Raises:
-        ValueError: If parameters are invalid
-        
+        InvalidParameterError: If parameters are invalid
+
     Examples:
         >>> ids = get_pair_id(['AAPL', 'MSFT'])
         >>> df = get_multiple_historical_prices(ids, "01012023", "31122023")
     """
-    if not stock_ids:
-        raise ValueError("stock_ids cannot be empty")
-    
-    logger.info(f"Fetching data for {len(stock_ids)} stocks")
-    
+    if not pair_ids:
+        raise InvalidParameterError("pair_ids cannot be empty")
+
+    logger.info(f"Fetching data for {len(pair_ids)} stocks")
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
         futures = [
-            executor.submit(get_historical_prices, stock_id, date_from, date_to) 
-            for stock_id in stock_ids
+            executor.submit(get_historical_prices, pair_id, date_from, date_to)
+            for pair_id in pair_ids
         ]
         results = []
-        
+
         for future in concurrent.futures.as_completed(futures):
             try:
                 result = future.result()

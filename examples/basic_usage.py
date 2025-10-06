@@ -128,24 +128,28 @@ def example_4_technical_analysis():
     print("\n" + "=" * 60)
     print("Example 4: Technical Analysis")
     print("=" * 60)
-    
+
     try:
+        # Get S&P 500 pair ID
+        print("🔍 Getting S&P 500 pair ID...")
+        spy_id = get_pair_id(['SPY'])[0]
+
         # Get pivot points for S&P 500
-        print("📊 S&P 500 Daily Pivot Points:")
-        pivot_data = get_technical_data('pivot_points', 'daily')
+        print("\n📊 SPY Daily Pivot Points:")
+        pivot_data = get_technical_data(spy_id, 'pivot_points', 'daily')
         if not pivot_data.empty:
             print(pivot_data.to_string(index=False))
         else:
             print("No pivot data available")
-        
+
         # Get moving averages
-        print("\n📊 S&P 500 Moving Averages:")
-        ma_data = get_technical_data('ma', 'daily')
+        print("\n📊 SPY Moving Averages:")
+        ma_data = get_technical_data(spy_id, 'ma', 'daily')
         if not ma_data.empty:
             print(ma_data.to_string(index=False))
         else:
             print("No moving average data available")
-            
+
     except Exception as e:
         print(f"❌ Error: {e}")
 

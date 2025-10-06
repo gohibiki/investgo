@@ -10,8 +10,8 @@ A Python library for fetching financial data from Investing.com, including histo
 
 - 📈 **Historical Data**: Fetch historical stock prices with automatic date range chunking
 - 🏢 **Holdings Data**: Get ETF/fund holdings, asset allocation, and sector breakdowns
-- 📊 **Technical Analysis**: Access technical indicators and pivot points
-- 🔍 **Symbol Search**: Find stock IDs by ticker symbols
+- 📊 **Technical Analysis**: Access pivot points, moving averages, technical indicators, and trading signals across 8 timeframes
+- 🔍 **Symbol Search**: Find pair IDs by ticker symbols
 - ⚡ **Concurrent Processing**: Fast data retrieval using multithreading
 - 🐼 **Pandas Integration**: Returns data as pandas DataFrames for easy analysis
 
@@ -26,15 +26,15 @@ pip install investgo
 ```python
 from investgo import get_pair_id, get_historical_prices, get_holdings
 
-# Get stock ID for a ticker
-stock_id = get_pair_id(['QQQ'])[0]
+# Get pair ID for a ticker
+pair_id = get_pair_id(['QQQ'])[0]
 
 # Fetch historical data
-df = get_historical_prices(stock_id, "01012021", "01012024")
+df = get_historical_prices(pair_id, "01012021", "01012024")
 print(df.head())
 
 # Get ETF holdings
-holdings = get_holdings(stock_id, "top_holdings")
+holdings = get_holdings(pair_id, "top_holdings")
 print(holdings)
 ```
 
@@ -42,12 +42,12 @@ print(holdings)
 
 ### Historical Data
 
-#### `get_historical_prices(stock_id, date_from, date_to)`
+#### `get_historical_prices(pair_id, date_from, date_to)`
 
 Fetch historical price data for a given stock.
 
 **Parameters:**
-- `stock_id` (str): The Investing.com pair ID
+- `pair_id` (str): The Investing.com pair ID
 - `date_from` (str): Start date in "DDMMYYYY" format
 - `date_to` (str): End date in "DDMMYYYY" format
 
@@ -58,13 +58,13 @@ Fetch historical price data for a given stock.
 data = get_historical_prices("1075", "01012023", "31122023")
 ```
 
-#### `get_multiple_historical_prices(stock_ids, date_from, date_to)`
+#### `get_multiple_historical_prices(pair_ids, date_from, date_to)`
 
 Fetch historical data for multiple stocks concurrently.
 
 **Parameters:**
-- `stock_ids` (list): List of Investing.com pair IDs
-- `date_from` (str): Start date in "DDMMYYYY" format  
+- `pair_ids` (list): List of Investing.com pair IDs
+- `date_from` (str): Start date in "DDMMYYYY" format
 - `date_to` (str): End date in "DDMMYYYY" format
 
 **Returns:** pandas.DataFrame with concatenated data
@@ -124,15 +124,53 @@ all_data = get_holdings(qqq_id, "all")
 
 ### Technical Analysis
 
-#### `get_technical_data(tech_type='pivot_points', interval='5min')`
+#### `get_technical_data(pair_id, tech_type='pivot_points', interval='daily')`
 
 Get technical analysis data and indicators.
 
 **Parameters:**
-- `tech_type` (str): Type of technical data ('pivot_points', 'ti', 'ma')
-- `interval` (str): Time interval ('5min', '15min', 'hourly', 'daily')
+- `pair_id` (str): The Investing.com pair ID
+- `tech_type` (str): Type of technical data:
+  - `'pivot_points'`: Support and resistance levels (classic & fibonacci)
+  - `'ti'`: Technical indicators
+  - `'ma'`: Moving averages (simple & exponential)
+  - `'summary'`: Technical summary with overall signal
+- `interval` (str): Time interval:
+  - `'5min'`, `'15min'`, `'30min'`: Intraday intervals
+  - `'hourly'`, `'5hourly'`: Hourly intervals
+  - `'daily'`, `'weekly'`, `'monthly'`: Long-term intervals
 
 **Returns:** pandas.DataFrame with technical indicators
+
+**Pivot Points Columns:** `level`, `classic`, `fibonacci`
+
+**Moving Averages Columns:** `period`, `simple_ma`, `simple_signal`, `exponential_ma`, `exponential_signal`
+
+**Technical Indicators Columns:** `indicator`, `value`, `signal`
+
+**Summary Columns:** `type`, `signal`, `action`, `buy`, `sell`, `neutral`
+
+```python
+# Example - Daily pivot points
+spy_id = get_pair_id('SPY')[0]
+pivot_data = get_technical_data(spy_id, 'pivot_points', 'daily')
+print(pivot_data)
+#       level  classic  fibonacci
+#          R3   709.80     688.57
+#          R2   688.57     676.19
+# Pivot Point   656.15     656.15
+
+# Example - Weekly moving averages
+weekly_ma = get_technical_data(spy_id, 'ma', 'weekly')
+
+# Example - Technical summary
+summary = get_technical_data(spy_id, 'summary', 'daily')
+print(summary)
+#                 type     signal     action
+#              Overall Strong Buy strong_buy
+#      Moving Averages Strong Buy        NaN
+# Technical Indicators Strong Buy        NaN
+```
 
 ## Complete Example
 
@@ -141,8 +179,8 @@ from investgo import get_pair_id, get_historical_prices, get_holdings
 import matplotlib.pyplot as plt
 
 # Search for QQQ ETF
-stock_ids = get_pair_id(['QQQ'])
-qqq_id = stock_ids[0]
+pair_ids = get_pair_id(['QQQ'])
+qqq_id = pair_ids[0]
 
 # Get 1 year of historical data
 historical_data = get_historical_prices(qqq_id, "01012023", "31122023")
@@ -161,14 +199,21 @@ print(holdings.head(10))
 
 ## Error Handling
 
-The library includes basic error handling, but you should wrap calls in try-except blocks for production use:
+The library uses custom exceptions for better error handling:
 
 ```python
+from investgo import get_pair_id, get_historical_prices
+from investgo.exceptions import InvalidParameterError, NoDataFoundError, APIError
+
 try:
-    stock_id = get_pair_id('INVALID_TICKER')[0]
-    data = get_historical_prices(stock_id, "01012023", "31122023")
-except ValueError as e:
-    print(f"Error: {e}")
+    pair_id = get_pair_id('INVALID_TICKER')[0]
+    data = get_historical_prices(pair_id, "01012023", "31122023")
+except NoDataFoundError as e:
+    print(f"No data found: {e}")
+except InvalidParameterError as e:
+    print(f"Invalid parameter: {e}")
+except APIError as e:
+    print(f"API error: {e}")
 except Exception as e:
     print(f"Unexpected error: {e}")
 ```

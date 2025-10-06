@@ -10,6 +10,8 @@ import pandas as pd
 from typing import Dict, Any, Union, List
 import logging
 
+from .exceptions import InvalidParameterError, APIError
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ def fetch_holdings_data(pair_id: str) -> Dict[str, Any]:
         JSON response containing holdings information
         
     Raises:
-        requests.exceptions.HTTPError: If the API request fails
+        APIError: If the API request fails
     """
     scraper = cloudscraper.create_scraper()
 
@@ -53,7 +55,7 @@ def fetch_holdings_data(pair_id: str) -> Dict[str, Any]:
         return response.json()
     except Exception as e:
         logger.error(f"Failed to fetch holdings data for pair_id {pair_id}: {e}")
-        raise
+        raise APIError(f"Failed to fetch holdings data for pair_id {pair_id}") from e
 
 
 def to_numeric(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
@@ -246,7 +248,8 @@ def get_holdings(
         pandas.DataFrame for specific holdings type, or list of DataFrames for "all"
         
     Raises:
-        ValueError: If pair_id is missing or holdings_type is invalid
+        InvalidParameterError: If pair_id is missing or holdings_type is invalid
+        APIError: If API request fails
         
     Examples:
         >>> pair_id = get_pair_id(['QQQ'])[0]
@@ -257,10 +260,10 @@ def get_holdings(
         >>> top_holdings, allocation, sectors, regions = all_data
     """
     if not pair_id:
-        raise ValueError("Missing required parameter: pair_id")
-    
+        raise InvalidParameterError("Missing required parameter: pair_id")
+
     if holdings_type not in VALID_HOLDINGS_TYPES:
-        raise ValueError(
+        raise InvalidParameterError(
             f"Invalid holdings_type '{holdings_type}'. "
             f"Choose from: {', '.join(sorted(VALID_HOLDINGS_TYPES))}"
         )

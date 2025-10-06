@@ -11,6 +11,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Union, Tuple, Dict, Any
 import logging
 
+from .exceptions import InvalidParameterError, NoDataFoundError, APIError
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -18,15 +20,15 @@ logger = logging.getLogger(__name__)
 def fetch_pair_data(search_string: str) -> Tuple[Dict[str, Any], str]:
     """
     Fetch pair data for a given search string from Investing.com API.
-    
+
     Args:
         search_string: The ticker symbol or name to search for
-        
+
     Returns:
         Tuple containing the JSON response and the original search string
-        
+
     Raises:
-        requests.exceptions.HTTPError: If the API request fails
+        APIError: If the API request fails
     """
     scraper = cloudscraper.create_scraper()
     url = "https://aappapi.investing.com/search_by_type.php"
@@ -38,9 +40,12 @@ def fetch_pair_data(search_string: str) -> Tuple[Dict[str, Any], str]:
     }
     headers = {"x-meta-ver": "14"}
 
-    response = scraper.get(url, params=params, headers=headers)
-    response.raise_for_status()
-    return response.json(), search_string
+    try:
+        response = scraper.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        return response.json(), search_string
+    except Exception as e:
+        raise APIError(f"Failed to fetch pair data for '{search_string}'") from e
 
 
 def json_to_dataframe(json_data_list: List[Tuple[Dict[str, Any], str]]) -> pd.DataFrame:
@@ -79,9 +84,9 @@ def json_to_dataframe(json_data_list: List[Tuple[Dict[str, Any], str]]) -> pd.Da
                 df_quotes['search_string'] = search_string
                 df_list.append(df_quotes)
             except KeyError as e:
-                print(f"KeyError: {e} in search string: {search_string}")
+                logger.warning(f"KeyError: {e} in search string: {search_string}")
         else:
-            print(f"Missing 'quotes' in 'data' for search string: {search_string}")
+            logger.warning(f"Missing 'quotes' in 'data' for search string: {search_string}")
     
     if df_list:
         return pd.concat(df_list, ignore_index=True)
@@ -107,7 +112,8 @@ def get_pair_id(
         - If display_mode="all": pandas.DataFrame with all search results
         
     Raises:
-        ValueError: If parameters are invalid or no data is found
+        InvalidParameterError: If parameters are invalid
+        NoDataFoundError: If no data is found
         
     Examples:
         >>> get_pair_id('AAPL')
@@ -117,7 +123,7 @@ def get_pair_id(
         (['14958', '20936'], ['Apple Inc', 'Microsoft Corporation'])
     """
     if not stock_ids:
-        raise ValueError("Missing required parameters")
+        raise InvalidParameterError("Missing required parameters: stock_ids cannot be empty")
 
     if isinstance(stock_ids, str):
         stock_ids = [stock_ids]
@@ -133,20 +139,20 @@ def get_pair_id(
                 result = future.result()
                 results.append(result)
             except Exception as exc:
-                print(f'Error fetching data for {future_to_search[future]}: {exc}')
+                logger.error(f'Error fetching data for {future_to_search[future]}: {exc}')
     
     df = json_to_dataframe(results)
 
     if df.empty:
-        raise ValueError("Failed to convert data to DataFrame")
+        raise NoDataFoundError("No data found for the provided stock IDs")
 
     if display_mode == "all":
         if len(stock_ids) > 1:
-            raise ValueError("Display mode 'all' can only be used with a single stock ID.")
+            raise InvalidParameterError("Display mode 'all' can only be used with a single stock ID")
         return df
     elif display_mode == "first" and name == 'yes':
         return df.groupby('search_string')['pair_id'].first().tolist(), df.groupby('search_string')['Description'].first().tolist()
     elif display_mode == "first":
         return df.groupby('search_string')['pair_id'].first().tolist()
     else:
-        raise ValueError("Invalid display_mode. Choose 'first' or 'all'.")
+        raise InvalidParameterError("Invalid display_mode. Choose 'first' or 'all'")

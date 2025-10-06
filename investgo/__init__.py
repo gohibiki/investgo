@@ -6,20 +6,30 @@ technical indicators, and search functionality for financial instruments.
 """
 
 from .search import get_pair_id
-from .historical import get_historical_prices, get_multiple_historical_prices  
+from .historical import get_historical_prices, get_multiple_historical_prices
 from .holdings import get_holdings
 from .technical import get_technical_data
+from .exceptions import (
+    InvestGoError,
+    APIError,
+    InvalidParameterError,
+    NoDataFoundError
+)
 
-__version__ = "1.0.6"
+__version__ = "1.0.7"
 __author__ = "gohibiki"
 __email__ = "gohibiki@protonmail.com"
 __description__ = "A Python library for fetching financial data from Investing.com"
 
 __all__ = [
     "get_pair_id",
-    "get_historical_prices", 
+    "get_historical_prices",
     "get_multiple_historical_prices",
     "get_holdings",
-    "get_technical_data"
+    "get_technical_data",
+    "InvestGoError",
+    "APIError",
+    "InvalidParameterError",
+    "NoDataFoundError"
 ]
 
