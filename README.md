@@ -4,13 +4,14 @@
 [![Python 3.6+](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A Python library for fetching financial data from Investing.com, including historical stock prices, ETF holdings, and technical indicators.
+A Python library for fetching financial data from Investing.com, including historical stock prices, ETF holdings, technical indicators, and market info.
 
 ## Features
 
 - 📈 **Historical Data**: Fetch historical stock prices with automatic date range chunking
 - 🏢 **Holdings Data**: Get ETF/fund holdings, asset allocation, and sector breakdowns
 - 📊 **Technical Analysis**: Access pivot points, moving averages, technical indicators, and trading signals across 8 timeframes
+- 📰 **Market Info**: Get comprehensive overview data including price, volume, fundamentals, sentiment, and technical summaries
 - 🔍 **Symbol Search**: Find pair IDs by ticker symbols
 - ⚡ **Concurrent Processing**: Fast data retrieval using multithreading
 - 🐼 **Pandas Integration**: Returns data as pandas DataFrames for easy analysis
@@ -24,17 +25,22 @@ pip install investgo
 ## Quick Start
 
 ```python
-from investgo import get_pair_id, get_historical_prices, get_holdings
+from investgo import get_pair_id, get_historical_prices, get_holdings, get_info
 
 # Get pair ID for a ticker
-pair_id = get_pair_id(['QQQ'])[0]
+pair_id = get_pair_id(['AAPL'])[0]
+
+# Get market info (price, fundamentals, sentiment)
+info = get_info(pair_id)
+print(info)
 
 # Fetch historical data
 df = get_historical_prices(pair_id, "01012021", "01012024")
 print(df.head())
 
 # Get ETF holdings
-holdings = get_holdings(pair_id, "top_holdings")
+qqq_id = get_pair_id(['QQQ'])[0]
+holdings = get_holdings(qqq_id, "top_holdings")
 print(holdings)
 ```
 
@@ -122,6 +128,55 @@ allocation = get_holdings(qqq_id, "assets_allocation")
 all_data = get_holdings(qqq_id, "all")
 ```
 
+### Market Info
+
+#### `get_info(pair_id)`
+
+Get comprehensive market overview data for any financial instrument.
+
+**Parameters:**
+- `pair_id` (str): The Investing.com pair ID
+
+**Returns:** pandas.DataFrame with comprehensive market data including:
+
+**Instrument Identity:**
+- `symbol`, `name`, `full_name`, `exchange`, `currency`, `pair_type`, `is_crypto`
+
+**Current Price Data:**
+- `last`, `bid`, `ask`, `change`, `change_percent`, `open`, `high`, `low`, `previous_close`
+
+**Volume:**
+- `volume`, `avg_volume_3m`
+
+**Performance:**
+- `52w_high`, `52w_low`, `one_year_return`
+
+**Technical & Sentiment:**
+- `technical_summary` (Strong Buy/Sell), `bullish`, `bearish` (sentiment percentages)
+
+**Stock-Specific (when available):**
+- `eps`, `pe_ratio`, `market_cap`, `shares_outstanding`, `beta`, `revenue`, `dividend`, `dividend_yield`, `next_earnings_date`
+
+**Index-Specific:**
+- `number_of_components`
+
+**Market Status:**
+- `exchange_is_open`, `last_timestamp`
+
+```python
+# Get comprehensive info for Apple stock
+apple_id = get_pair_id('AAPL')[0]
+info = get_info(apple_id)
+
+print(f"Symbol: {info['symbol'].iloc[0]}")
+print(f"Price: {info['last'].iloc[0]}")
+print(f"Change: {info['change_percent'].iloc[0]}%")
+print(f"Market Cap: {info['market_cap'].iloc[0]}")
+print(f"P/E Ratio: {info['pe_ratio'].iloc[0]}")
+print(f"Technical Signal: {info['technical_summary'].iloc[0]}")
+print(f"Sentiment - Bullish: {info['bullish'].iloc[0]}% / Bearish: {info['bearish'].iloc[0]}%")
+```
+
 ### Technical Analysis
 
 #### `get_technical_data(pair_id, tech_type='pivot_points', interval='daily')`
@@ -148,7 +203,7 @@ Get technical analysis data and indicators.
 
 **Technical Indicators Columns:** `indicator`, `value`, `signal`
 
-**Summary Columns:** `type`, `signal`, `action`, `buy`, `sell`, `neutral`
+**Summary Columns:** `type`, `signal`, `action`, `buy`, `sell`, `neutral`, `value`
 
 ```python
 # Example - Daily pivot points
@@ -166,21 +221,28 @@ weekly_ma = get_technical_data(spy_id, 'ma', 'weekly')
 # Example - Technical summary
 summary = get_technical_data(spy_id, 'summary', 'daily')
 print(summary)
-#                 type     signal     action
-#              Overall Strong Buy strong_buy
-#      Moving Averages Strong Buy        NaN
-# Technical Indicators Strong Buy        NaN
+#                    type         signal     action      buy      sell     neutral   value
+#                 Overall     Strong Buy strong_buy      NaN       NaN         NaN     NaN
+#         Moving Averages     Strong Buy        NaN Buy (10) Sell (2)         NaN     NaN
+#    Technical Indicators     Strong Buy        NaN  Buy (8)  Sell (2) Neutral (1)     NaN
+#        ATR (Volatility) High Volatility        NaN      NaN       NaN         NaN  1.3011
 ```
 
 ## Complete Example
 
 ```python
-from investgo import get_pair_id, get_historical_prices, get_holdings
+from investgo import get_pair_id, get_historical_prices, get_holdings, get_info
 import matplotlib.pyplot as plt
 
 # Search for QQQ ETF
 pair_ids = get_pair_id(['QQQ'])
 qqq_id = pair_ids[0]
+
+# Get market info
+info = get_info(qqq_id)
+print(f"\n{info['name'].iloc[0]} ({info['symbol'].iloc[0]})")
+print(f"Price: {info['last'].iloc[0]} {info['change_percent'].iloc[0]}%")
+print(f"Technical Signal: {info['technical_summary'].iloc[0]}")
 
 # Get 1 year of historical data
 historical_data = get_historical_prices(qqq_id, "01012023", "31122023")
@@ -193,7 +255,7 @@ historical_data['price'].plot(title='QQQ Price History')
 plt.show()
 
 # Display top 10 holdings
-print("Top 10 Holdings:")
+print("\nTop 10 Holdings:")
 print(holdings.head(10))
 ```
 

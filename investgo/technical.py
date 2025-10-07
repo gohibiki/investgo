@@ -2,12 +2,12 @@
 Technical analysis data functionality for InvestGo.
 """
 
-import cloudscraper
 import pandas as pd
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import logging
 
 from .exceptions import InvalidParameterError, APIError
+from .utils import get_scraper, get_default_headers
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ def fetch_technical_data(pair_id: str) -> Dict[str, Any]:
     Raises:
         APIError: If the API request fails
     """
-    scraper = cloudscraper.create_scraper()
+    scraper = get_scraper()
 
     url = "https://aappapi.investing.com/get_screen.php"
     params = {
@@ -52,7 +52,7 @@ def fetch_technical_data(pair_id: str) -> Dict[str, Any]:
         "lang_ID": 1,
         "additionalTimeframes": "Yes"
     }
-    headers = {"x-meta-ver": "14"}
+    headers = get_default_headers()
 
     try:
         response = scraper.get(url, params=params, headers=headers)
@@ -163,6 +163,16 @@ def get_technical_data(
                                 'buy': ti_sum.get('ti_buy'),
                                 'sell': ti_sum.get('ti_sell'),
                                 'neutral': ti_sum.get('ti_neutral')
+                            })
+
+                        # ATR (Volatility)
+                        ti_items = tech_data.get('ti', [])
+                        atr_item = next((item for item in ti_items if 'ATR' in item.get('text', '')), None)
+                        if atr_item:
+                            summary_data.append({
+                                'type': 'ATR (Volatility)',
+                                'signal': atr_item.get('action'),
+                                'value': atr_item.get('value')
                             })
 
                         df = pd.DataFrame(summary_data)

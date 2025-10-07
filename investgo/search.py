@@ -5,13 +5,13 @@ This module provides functions to search for financial instruments
 and retrieve their pair IDs from Investing.com.
 """
 
-import cloudscraper
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Union, Tuple, Dict, Any
 import logging
 
 from .exceptions import InvalidParameterError, NoDataFoundError, APIError
+from .utils import get_scraper, get_default_headers
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -30,15 +30,15 @@ def fetch_pair_data(search_string: str) -> Tuple[Dict[str, Any], str]:
     Raises:
         APIError: If the API request fails
     """
-    scraper = cloudscraper.create_scraper()
+    scraper = get_scraper()
     url = "https://aappapi.investing.com/search_by_type.php"
     params = {
-        "section": "quotes", 
-        "string": search_string, 
+        "section": "quotes",
+        "string": search_string,
         "lang_ID": 1,
         "include_pair_attr": "true"
     }
-    headers = {"x-meta-ver": "14"}
+    headers = get_default_headers()
 
     try:
         response = scraper.get(url, params=params, headers=headers)

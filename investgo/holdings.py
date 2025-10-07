@@ -5,12 +5,12 @@ This module provides functions to fetch ETF/fund holdings, asset allocation,
 sector breakdown, and geographic allocation data.
 """
 
-import cloudscraper
 import pandas as pd
-from typing import Dict, Any, Union, List
+from typing import Dict, Any, Union, List, Optional
 import logging
 
 from .exceptions import InvalidParameterError, APIError
+from .utils import get_scraper, get_default_headers
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ def fetch_holdings_data(pair_id: str) -> Dict[str, Any]:
     Raises:
         APIError: If the API request fails
     """
-    scraper = cloudscraper.create_scraper()
+    scraper = get_scraper()
 
     url = "https://aappapi.investing.com/get_screen.php"
     params = {
@@ -47,7 +47,7 @@ def fetch_holdings_data(pair_id: str) -> Dict[str, Any]:
         "pair_ID": pair_id,
         "lang_ID": 1,
     }
-    headers = {"x-meta-ver": "14"}
+    headers = get_default_headers()
 
     try:
         response = scraper.get(url, params=params, headers=headers)

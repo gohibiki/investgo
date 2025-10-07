@@ -5,14 +5,14 @@ This module provides functions to fetch and process historical stock price data
 from Investing.com with support for large date ranges and concurrent processing.
 """
 
-import cloudscraper
 import pandas as pd
 from datetime import datetime, timedelta
 import concurrent.futures
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 import logging
 
 from .exceptions import InvalidParameterError, NoDataFoundError, APIError
+from .utils import get_scraper, get_default_headers
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ def fetch_historical_prices(pair_id: str, date_from: str, date_to: str) -> Dict[
     Raises:
         APIError: If the API request fails
     """
-    scraper = cloudscraper.create_scraper()
+    scraper = get_scraper()
     url = "https://aappapi.investing.com/get_screen.php"
     params = {
         "screen_ID": 63,
@@ -42,7 +42,7 @@ def fetch_historical_prices(pair_id: str, date_from: str, date_to: str) -> Dict[
         "date_from": date_from,
         "date_to": date_to
     }
-    headers = {"x-meta-ver": "14"}
+    headers = get_default_headers()
 
     try:
         response = scraper.get(url, params=params, headers=headers)
