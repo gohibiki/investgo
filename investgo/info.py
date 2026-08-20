@@ -84,20 +84,21 @@ def get_info(pair_id: str) -> pd.DataFrame:
     try:
         data = fetch_info_data(pair_id)
 
+        # Navigate to screen_data
+        data_list = data.get('data', [])
+        screen_data = data_list[0].get('screen_data', {}) if data_list else {}
+
         # Navigate to pairs_data
-        pairs_data = (data.get('data', [{}])[0]
-                      .get('screen_data', {})
-                      .get('pairs_data', [{}])[0])
+        pairs_data_list = screen_data.get('pairs_data', [])
+        pairs_data = pairs_data_list[0] if pairs_data_list else {}
 
         if not pairs_data:
             logger.warning("No pairs data found in response")
             return pd.DataFrame()
 
         # Get pairs_attr for additional metadata
-        pairs_attr = (data.get('data', [{}])[0]
-                      .get('screen_data', {})
-                      .get('pairs_attr', [{}]))
-        pair_attr = pairs_attr[0] if pairs_attr else {}
+        pairs_attr_list = screen_data.get('pairs_attr', [])
+        pair_attr = pairs_attr_list[0] if pairs_attr_list else {}
 
         if not pair_attr:
             logger.warning("No pairs_attr found in response - some fields may be missing")
