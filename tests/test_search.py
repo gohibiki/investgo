@@ -65,8 +65,8 @@ class TestDataProcessing:
         assert result.empty
 
 
-@patch('investgo.search.cloudscraper.create_scraper')
-def test_fetch_pair_data_success(mock_scraper):
+@patch('investgo.search.get_scraper')
+def test_fetch_pair_data_success(mock_get_scraper):
     """Test successful API call."""
     # Mock the scraper and response
     mock_response = MagicMock()
@@ -86,7 +86,7 @@ def test_fetch_pair_data_success(mock_scraper):
     
     mock_scraper_instance = MagicMock()
     mock_scraper_instance.get.return_value = mock_response
-    mock_scraper.return_value = mock_scraper_instance
+    mock_get_scraper.return_value = mock_scraper_instance
     
     result, search_string = fetch_pair_data('AAPL')
     
@@ -95,15 +95,15 @@ def test_fetch_pair_data_success(mock_scraper):
     assert 'quotes' in result['data']
 
 
-@patch('investgo.search.cloudscraper.create_scraper')
-def test_fetch_pair_data_http_error(mock_scraper):
+@patch('investgo.search.get_scraper')
+def test_fetch_pair_data_http_error(mock_get_scraper):
     """Test handling of HTTP errors."""
     mock_response = MagicMock()
     mock_response.raise_for_status.side_effect = Exception("HTTP 404")
     
     mock_scraper_instance = MagicMock()
     mock_scraper_instance.get.return_value = mock_response
-    mock_scraper.return_value = mock_scraper_instance
+    mock_get_scraper.return_value = mock_scraper_instance
     
     with pytest.raises(Exception):
         fetch_pair_data('INVALID')

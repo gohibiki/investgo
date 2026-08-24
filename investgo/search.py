@@ -128,6 +128,12 @@ def get_pair_id(
     if isinstance(stock_ids, str):
         stock_ids = [stock_ids]
 
+    if display_mode not in ("first", "all"):
+        raise InvalidParameterError("Invalid display_mode. Choose 'first' or 'all'")
+
+    if display_mode == "all" and len(stock_ids) > 1:
+        raise InvalidParameterError("Display mode 'all' can only be used with a single stock ID")
+
     with ThreadPoolExecutor() as executor:
         future_to_search = {
             executor.submit(fetch_pair_data, stock_id): stock_id 

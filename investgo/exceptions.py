@@ -28,7 +28,7 @@ class APIError(InvestGoError):
         super().__init__(message)
 
 
-class InvalidParameterError(InvestGoError):
+class InvalidParameterError(InvestGoError, ValueError):
     """
     Raised when invalid parameters are provided to functions.
 

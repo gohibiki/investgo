@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='investgo',
-    version='1.0.9',
+    version='1.0.10',
     packages=find_packages(),
     install_requires=[
-        'cloudscraper',
+        'cloudscraper>=3.0.0',
         'pandas',
     ],
     author='gohibiki',
