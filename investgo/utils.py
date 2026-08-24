@@ -44,8 +44,15 @@ def get_scraper():
             _scraper_instance.max_concurrent_requests = 10
         if hasattr(_scraper_instance, 'min_request_interval'):
             _scraper_instance.min_request_interval = 0.0
-        if hasattr(_scraper_instance, 'rotate_tls_ciphers'):
-            _scraper_instance.rotate_tls_ciphers = False
+        # Keep rotate_tls_ciphers at its default (True): disabling it gets every
+        # request 403-blocked by investing.com's Cloudflare protection.
+        if hasattr(_scraper_instance, 'auto_refresh_on_403'):
+            # v3's 403 auto-refresh recurses forever (request -> _refresh_session
+            # -> Session.get -> request); disable it and surface the 403 instead.
+            _scraper_instance.auto_refresh_on_403 = False
+        if hasattr(_scraper_instance, 'enable_stealth'):
+            # Stealth mode adds 0.5-2s random sleeps per request.
+            _scraper_instance.enable_stealth = False
 
     # Defensive check on instance attributes
     if not hasattr(_scraper_instance, 'current_concurrent_requests'):
