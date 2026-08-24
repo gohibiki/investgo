@@ -1,2 +1,2 @@
-cloudscraper>=1.2.68
+requests>=2.31.0
 pandas>=2.2.1
