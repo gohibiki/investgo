@@ -22,6 +22,13 @@ A Python library for fetching financial data from Investing.com, including histo
 pip install investgo
 ```
 
+Investing.com's Cloudflare protection currently blocks every cloudscraper release on PyPI (1.2.71 and older all get HTTP 403). Until cloudscraper 3.x reaches PyPI, install it from GitHub first:
+
+```bash
+pip install git+https://github.com/VeNoMouS/cloudscraper.git
+pip install investgo
+```
+
 ## Quick Start
 
 ```python
